@@ -14,6 +14,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
@@ -30,21 +31,18 @@ public class spaceGame {
 	private Scene _scene;
 	private Group _root;
 
-	private Circle _cirAst, _cirAst2, _cirAst3;
-
 	private Ellipse _falcon;
-
-	private Rectangle _laser;
-
-	private Shape _coll1, _coll2, _coll3;
 
 	private Timeline _timeline;
 
 	private boolean _gameOver = false;
 
 	private ArrayList<Laser> _lasers = new ArrayList<Laser>();
+	private ArrayList<Asteroids> _asts = new ArrayList<Asteroids>();
 
 	private EventHandler<ActionEvent> _handleAst;
+
+	private Shape _collShip;
 
 	private Image explosion = new Image("application/explosion.png");
 	private ImagePattern _explo = new ImagePattern(explosion);
@@ -70,28 +68,7 @@ public class spaceGame {
 		_falcon.setRadiusY(35);
 		_falcon.setFill(_shipNM);
 
-		_cirAst = new Circle();
-		_cirAst.setCenterX(1000);
-		_cirAst.setCenterY(400);
-		_cirAst.setRadius(20);
-		_cirAst.setFill(_ast);
-
-		_cirAst2 = new Circle();
-		_cirAst2.setCenterX(1000);
-		_cirAst2.setCenterY(300);
-		_cirAst2.setRadius(30);
-		_cirAst2.setFill(_ast);
-
-		_cirAst3 = new Circle();
-		_cirAst3.setCenterX(1000);
-		_cirAst3.setCenterY(100);
-		_cirAst3.setRadius(40);
-		_cirAst3.setFill(_ast);
-
 		_root = new Group();
-		_root.getChildren().add(_cirAst);
-		_root.getChildren().add(_cirAst2);
-		_root.getChildren().add(_cirAst3);
 		_root.getChildren().add(_falcon);
 
 		_scene = new Scene(_root, 1000, 500);
@@ -101,16 +78,12 @@ public class spaceGame {
 		_stage.setScene(_scene);
 		_stage.show();
 
-		// moveShipMouse();
+		// rotationAst();
 		setTimeline();
 		_timeline.play();
 	}
 
 	private void setTimeline() {
-
-		moveShipOnKeyPressed();
-		imageOnKeyreleased();
-		rotationAst();
 
 		_timeline = new Timeline();
 		_handleAst = new EventHandler<ActionEvent>() {
@@ -120,35 +93,52 @@ public class spaceGame {
 
 			@Override
 			public void handle(ActionEvent event) {
-				_cirAst.setLayoutX(_cirAst.getLayoutX() - dxs);
-				_cirAst2.setLayoutX(_cirAst2.getLayoutX() - dxm);
-				_cirAst3.setLayoutX(_cirAst3.getLayoutX() - dxb);
-				
-				_coll1 = Shape.intersect((Shape) _falcon, (Shape) _cirAst);
-				_coll2 = Shape.intersect((Shape) _falcon, (Shape) _cirAst2);
-				_coll3 = Shape.intersect((Shape) _falcon, (Shape) _cirAst3);
 
-				_root.getChildren().add(_coll1);
-				_root.getChildren().add(_coll2);
-				_root.getChildren().add(_coll3);
-				
-				if (_coll1.computeAreaInScreen() > 10 || _coll2.computeAreaInScreen() > 10
-						|| _coll3.computeAreaInScreen() > 10) {
-					_falcon.setFill(_explo);
-					_timeline.stop();
-					_gameOver = true;
-				}
-				if (_cirAst.getLayoutX() < (-1000 - _cirAst.getRadius())) {
-					_cirAst.setLayoutX(1000);
-					_cirAst.setCenterY(Math.random() * 500);
-				}
-				if (_cirAst2.getLayoutX() < (-1000 - _cirAst2.getRadius())) {
-					_cirAst2.setLayoutX(1000);
-					_cirAst2.setCenterY(Math.random() * 500);
-				}
-				if (_cirAst3.getLayoutX() < (-1000 - _cirAst3.getRadius())) {
-					_cirAst3.setLayoutX(1000);
-					_cirAst3.setCenterY(Math.random() * 500);
+				// moveShipOnKeyPressed();
+				// imageOnKeyreleased();
+				moveShipMouse();
+				actionOnMouseClicked();
+				astCreation();
+
+				try {
+					if (_lasers.size() > 0) {
+						for (int i = 0; i < _lasers.size(); i++) {
+							if (_lasers.get(i).getLayoutX() < 1000) {
+								_lasers.get(i).setLayoutX(_lasers.get(i).getLayoutX() + 20);
+
+								Boolean _collast = _lasers.get(i).getBoundsInParent()
+										.intersects(_asts.get(i).getBoundsInParent());
+
+								if (_collast == true) {
+									_asts.get(i).setFill(_explo);
+								}
+							} else {
+								_lasers.clear();
+								_root.getChildren().remove(_lasers.get(i));
+							}
+						}
+					}
+					if (_asts.size() > 0) {
+						for (int ia = 0; ia < _asts.size(); ia++) {
+							if (_asts.get(ia).getCenterX() > -100) {
+								_asts.get(ia).setCenterX(_asts.get(ia).getCenterX() - 2);
+								_root.getChildren().add(_asts.get(ia));
+								
+								_collShip = Shape.intersect((Shape) _falcon, (Shape) _asts.get(ia));
+								_root.getChildren().add(_collShip);
+								
+							} else {
+								_asts.clear();
+								_asts.get(ia).setFill(null);
+								_root.getChildren().remove(_asts.get(ia));
+							}
+						}
+					}
+					if (_collShip.computeAreaInScreen() > 1){
+						_falcon.setFill(_explo);
+					}
+				} catch (Exception IllegalArgumentException) {
+					// System.out.println("exception");
 				}
 			}
 		};
@@ -156,16 +146,32 @@ public class spaceGame {
 		_timeline.setCycleCount(Timeline.INDEFINITE);
 	}
 
-	// private void moveShipMouse() {
-	// _scene.setOnMouseMoved(new EventHandler<MouseEvent>() {
-	//
-	// @Override
-	// public void handle(MouseEvent mouse) {
-	// _recShip.setY(mouse.getY() - 55);
-	// _recShip.setX(mouse.getX() - 60);
-	// }
-	// });
-	// }
+	private void moveShipMouse() {
+		_scene.setOnMouseMoved(new EventHandler<MouseEvent>() {
+
+			@Override
+			public void handle(MouseEvent mouse) {
+				_falcon.setCenterY(mouse.getY());
+				_falcon.setCenterX(mouse.getX());
+			}
+		});
+	}
+
+	private void actionOnMouseClicked() {
+
+		_scene.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+			@Override
+			public void handle(MouseEvent mouseEvent) {
+				if (MouseButton.PRIMARY != null) {
+					if (_gameOver == false) {
+						loading();
+						shoot();
+					}
+				}
+			}
+		});
+	}
 
 	private void moveShipOnKeyPressed() {
 
@@ -205,10 +211,10 @@ public class spaceGame {
 					break;
 				case SPACE:
 					if (_gameOver == false) {
-//						tir();
-//						_lasers.get(1).setX(_laser.getX() + rx);
+						loading();
 						shoot();
 					}
+					break;
 				default:
 				}
 			}
@@ -243,60 +249,70 @@ public class spaceGame {
 		});
 	}
 
-	public void tir() {
-		
-		try{
-			for(int i = 0; i < 2; i++){
-				_lasers.add(new Laser(_falcon.getCenterX(), _falcon.getCenterY(), 2, 10));
+	public void loading() {
+		try {
+			for (int i = 1; i < 2; i++) {
+				_lasers.add(new Laser(10, 2, Color.RED));
+			}
+		} catch (Exception IllegalArgumentException) {
 		}
-			_root.getChildren().addAll(_lasers);
-		System.out.println(_lasers.size());
-		System.out.println(_lasers);
-		
-		}catch(Exception e) {
-			e.printStackTrace();
-		}
-		
 	}
 
 	public void shoot() {
+		try {
+			for (int i = 0; i < _lasers.size(); i++) {
 
-		_laser = new Rectangle(_falcon.getCenterX(), _falcon.getCenterY() - 3, 10, 2);
+				_lasers.get(i).setX(_falcon.getCenterX());
+				_lasers.get(i).setY(_falcon.getCenterY() - 2);
 
-		_laser.setFill(Color.RED);
-
-		Timeline timeline = new Timeline();
-
-		timeline.setCycleCount(1);
-		timeline.setAutoReverse(false);
-
-		KeyValue kv = new KeyValue(_laser.xProperty(), 2000);
-		KeyFrame kf = new KeyFrame(Duration.millis(2000), kv);
-		
-		_root.getChildren().add(_laser);
-		
-		timeline.getKeyFrames().add(kf);
-		timeline.play();
+				_root.getChildren().add(_lasers.get(i));
+			}
+		} catch (Exception IllegalArgumentException) {
+			// System.out.println("problème shoot");
+		}
 	}
 
-	private void rotationAst() {
-
-		RotateTransition _fastrt = new RotateTransition(Duration.millis(4000), _cirAst);
-		_fastrt.setByAngle(360);
-		_fastrt.setCycleCount(Timeline.INDEFINITE);
-
-		RotateTransition _mediumrt = new RotateTransition(Duration.millis(6000), _cirAst2);
-		_mediumrt.setByAngle(360);
-		_mediumrt.setCycleCount(Timeline.INDEFINITE);
-
-		RotateTransition _slowrt = new RotateTransition(Duration.millis(9000), _cirAst3);
-		_slowrt.setByAngle(360);
-		_slowrt.setCycleCount(Timeline.INDEFINITE);
-
-		_fastrt.play();
-		_mediumrt.play();
-		_slowrt.play();
+	public void astCreation() {
+		try {
+			for (int i = 0; i < 1; i++) {
+				_asts.add(new Asteroids(1000, (Math.random() * 500), ((Math.random() * 30) + 10), _ast));
+			}
+		} catch (Exception IllegalArgumentException) {
+		}
 	}
+
+	// private void colLas(){
+	//
+	// for (int i = 0; i < _lasers.size(); i++){
+	// _collas = Shape.intersect((Shape)_lasers.get(i), (Shape) _cirAst3);
+	//
+	// if (_collas.computeAreaInScreen() > 10){
+	// _cirAst3.setFill(_explo);
+	// }
+	// }
+	// }
+
+	// private void rotationAst() {
+	//
+	// RotateTransition _fastrt = new RotateTransition(Duration.millis(4000),
+	// _cirAst);
+	// _fastrt.setByAngle(360);
+	// _fastrt.setCycleCount(Timeline.INDEFINITE);
+	//
+	// RotateTransition _mediumrt = new RotateTransition(Duration.millis(6000),
+	// _cirAst2);
+	// _mediumrt.setByAngle(360);
+	// _mediumrt.setCycleCount(Timeline.INDEFINITE);
+	//
+	// RotateTransition _slowrt = new RotateTransition(Duration.millis(9000),
+	// _cirAst3);
+	// _slowrt.setByAngle(360);
+	// _slowrt.setCycleCount(Timeline.INDEFINITE);
+	//
+	// _fastrt.play();
+	// _mediumrt.play();
+	// _slowrt.play();
+	// }
 
 	private void rotationShipUp() {
 		RotateTransition _shipUp = new RotateTransition(Duration.millis(500), _falcon);
