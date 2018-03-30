@@ -44,6 +44,8 @@ public class spaceGame {
 
 	private Shape _collShip;
 
+	Boolean _collast;
+
 	private Image explosion = new Image("application/explosion.png");
 	private ImagePattern _explo = new ImagePattern(explosion);
 
@@ -106,36 +108,38 @@ public class spaceGame {
 							if (_lasers.get(i).getLayoutX() < 1000) {
 								_lasers.get(i).setLayoutX(_lasers.get(i).getLayoutX() + 20);
 
-								Boolean _collast = _lasers.get(i).getBoundsInParent()
+								_collast = _lasers.get(i).getBoundsInParent()
 										.intersects(_asts.get(i).getBoundsInParent());
 
 								if (_collast == true) {
 									_asts.get(i).setFill(_explo);
+									_root.getChildren().remove(_lasers.get(i));
+									_lasers.clear();
 								}
 							} else {
-								_lasers.clear();
 								_root.getChildren().remove(_lasers.get(i));
+								_lasers.clear();
 							}
 						}
 					}
-					if (_asts.size() > 0) {
-						for (int ia = 0; ia < _asts.size(); ia++) {
-							if (_asts.get(ia).getCenterX() > -100) {
-								_asts.get(ia).setCenterX(_asts.get(ia).getCenterX() - 2);
-								_root.getChildren().add(_asts.get(ia));
-								
-								_collShip = Shape.intersect((Shape) _falcon, (Shape) _asts.get(ia));
-								_root.getChildren().add(_collShip);
-								
-							} else {
-								_asts.clear();
-								_asts.get(ia).setFill(null);
-								_root.getChildren().remove(_asts.get(ia));
+					for (int ia = 0; ia < _asts.size(); ia++) {
+						if (_asts.get(ia).getLayoutX() > -1050) {
+							// _collShip = Shape.intersect(_falcon,
+							// _asts.get(ia));
+							_root.getChildren().add(_collShip);
+							_collShip.setFill(Color.TRANSPARENT);
+
+							if (_collShip.computeAreaInScreen() > 1) {
+								_falcon.setFill(_explo);
+								_timeline.stop();
 							}
+							// _asts.get(ia).setLayoutX((_asts.get(ia).getLayoutX()
+							// - 4));
+							_root.getChildren().add(_asts.get(ia));
+						} else {
+							_root.getChildren().remove(_asts.get(ia));
+							_asts.clear();
 						}
-					}
-					if (_collShip.computeAreaInScreen() > 1){
-						_falcon.setFill(_explo);
 					}
 				} catch (Exception IllegalArgumentException) {
 					// System.out.println("exception");
@@ -144,6 +148,7 @@ public class spaceGame {
 		};
 		_timeline.getKeyFrames().addAll(new KeyFrame(Duration.millis(9), _handleAst));
 		_timeline.setCycleCount(Timeline.INDEFINITE);
+
 	}
 
 	private void moveShipMouse() {
@@ -151,8 +156,10 @@ public class spaceGame {
 
 			@Override
 			public void handle(MouseEvent mouse) {
-				_falcon.setCenterY(mouse.getY());
-				_falcon.setCenterX(mouse.getX());
+				if (_gameOver == false) {
+					_falcon.setCenterY(mouse.getY());
+					_falcon.setCenterX(mouse.getX());
+				}
 			}
 		});
 	}
@@ -274,8 +281,10 @@ public class spaceGame {
 
 	public void astCreation() {
 		try {
-			for (int i = 0; i < 1; i++) {
-				_asts.add(new Asteroids(1000, (Math.random() * 500), ((Math.random() * 30) + 10), _ast));
+			for (int i = 0; i < 3; i++) {
+				_asts.add(new Asteroids(1000, (Math.random() * 500), (Math.random() * 30) + 15, _ast));
+				_collShip = Shape.intersect(_falcon, _asts.get(i));
+				_asts.get(i).setLayoutX((_asts.get(i).getLayoutX() - 4));
 			}
 		} catch (Exception IllegalArgumentException) {
 		}
